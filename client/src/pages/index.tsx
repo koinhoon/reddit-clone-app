@@ -1,11 +1,74 @@
+import { Inter } from '@next/font/google'
+import axios from 'axios'
 import Head from 'next/head'
 import Image from 'next/image'
-import { Inter } from '@next/font/google'
-import styles from '../styles/Home.module.css'
+import Link from 'next/link'
+import useSWR from 'swr'
+import { useAuthState } from '../context/auth'
+import { Post, Sub } from '../types'
+import useSWRInfinite from 'swr/infinite';
+import PostCard from '../components/PostCard'
+import { useEffect, useState } from 'react'
 
 const inter = Inter({ subsets: ['latin'] })
 
 export default function Home() {
+
+  const { authenticated, user, loading } = useAuthState();
+
+  const address = `/subs/sub/topSubs`;
+  const getKey = (pageIndex: number, previousPageData : Post[]) => {
+    if((previousPageData && !previousPageData.length)) return null;
+    return `/posts?page=${pageIndex}`;
+  }
+  const fetcher2 = async (url : string) => {
+    try {
+        const res = await axios.get(url);
+        return res.data;
+    } catch(error: any) {
+        throw error.response.data;
+    }
+  }
+  const { data, error, size: page, setSize: setPage, isValidating, mutate } = useSWRInfinite<Post[]>(getKey, fetcher2);
+  const isInitialLoading = !data && !error;
+  const posts: Post[] = data ? ([] as Post[]).concat(...data) : [];
+  const { data: topSubs } = useSWR<Sub[]>(address);
+  const [observedPost, setObservedPost] = useState("");
+
+  useEffect(() => {
+    // 포스트가 없다면 return 
+    if (!posts || posts.length === 0) return;
+    // posts 배열안에 마지막 post에 id를 가져옵니다.
+    const id = posts[posts.length - 1].identifier;
+    // posts 배열에 post가 추가돼서 마지막 post가 바뀌었다면
+    // 바뀐 post 중 마지막post를 obsevedPost로 
+    console.log("posts ::  " + posts.length + " id :: " + id + " current id :: " + observedPost);
+    if (id !== observedPost) {
+      setObservedPost(id);
+      observeElement(document.getElementById(id));
+    }
+  }, [posts])
+
+  const observeElement = (element: HTMLElement | null) => {
+    if (!element) return;
+    // 브라우저 뷰포트(ViewPort)와 설정한 요소(Element)의 교차점을 관찰
+    const observer = new IntersectionObserver(
+      // entries는 IntersectionObserverEntry 인스턴스의 배열
+      (entries) => {
+        // isIntersecting: 관찰 대상의 교차 상태(Boolean)
+        if (entries[0].isIntersecting === true) {
+          console.log("마지막 포스트에 왔습니다....!!!");
+          setPage(page + 1);
+          observer.unobserve(element);
+        }
+      },
+      {threshold: 1}
+    );
+    // 대상 요소의 관찰을 시작
+    observer.observe(element);
+  }
+
+  
   return (
     <>
       <Head>
@@ -14,110 +77,80 @@ export default function Home() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
-      <main className={styles.main}>
-        <div className={styles.description}>
-          <p>
-            Get started by editing&nbsp;
-            <code className={styles.code}>pages/index.tsx</code>
-          </p>
-          <div>
-            <a
-              href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              By{' '}
-              <Image
-                src="/vercel.svg"
-                alt="Vercel Logo"
-                className={styles.vercelLogo}
-                width={100}
-                height={24}
-                priority
-              />
-            </a>
-          </div>
-        </div>
 
-        <div className={styles.center}>
-          <Image
-            className={styles.logo}
-            src="/next.svg"
-            alt="Next.js Logo"
-            width={180}
-            height={37}
-            priority
+      <div className='flex max-w-5xl px-4 pt-5 mx-auto'>
+        {/* 포스트 리스트 */}
+        <div className='w-full md:mr-3 md:w-8/12'>
+          {isInitialLoading && <p className="text-lg text-center">로딩중입니다...</p>}
+          {posts?.map(post => (
+          <PostCard
+            key={post.identifier}
+            post={post}
+            //mutate={mutate}
           />
-          <div className={styles.thirteen}>
-            <Image
-              src="/thirteen.svg"
-              alt="13"
-              width={40}
-              height={31}
-              priority
-            />
+        ))}
+
+        </div>
+        <div className='hidden w-4/12 ml-3 md:block'>
+          <div className='bg-white border rounded'>
+            <div className='p-4 border-b'>
+              <p className='text-lg font-semibold text-center'>상위 커뮤니티</p>
+            </div>
+
+            {/* 커뮤니티 리스트 */}
+            <div>
+            {topSubs?.map((sub) => (
+              <div
+                key={sub.name}
+                className="flex items-center px-4 py-2 text-xs border-b"
+              >
+                <Link href={`/r/${sub.name}`}>
+                    <Image
+                      src={sub.imageUrl}
+                      className="rounded-full cursor-pointer"
+                      alt="Sub"
+                      width={24}
+                      height={24}
+                    />
+                </Link>
+                <Link href={`/r/${sub.name}`}>
+                  <div className='ml-2 font-bold hover:cursor-pointer'>
+                    /r/{sub.name}
+                  </div>
+                </Link>
+                <p className='ml-auto font-md'>{sub.postCount}</p>
+              </div>
+            ))}
+          </div>
+            
+            { authenticated && 
+            <div className='w-full py-6 text-center'>
+              <Link href="/subs/create">
+                <div className='mx-auto w-10/12 p-1 text-center text-white bg-gray-400 rounded'>
+                  커뮤니티 만들기
+                </div>
+              </Link>
+            </div>
+            }
           </div>
         </div>
+      </div>
+      
 
-        <div className={styles.grid}>
-          <a
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className={styles.card}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <h2 className={inter.className}>
-              Docs <span>-&gt;</span>
-            </h2>
-            <p className={inter.className}>
-              Find in-depth information about Next.js features and&nbsp;API.
-            </p>
-          </a>
-
-          <a
-            href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className={styles.card}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <h2 className={inter.className}>
-              Learn <span>-&gt;</span>
-            </h2>
-            <p className={inter.className}>
-              Learn about Next.js in an interactive course with&nbsp;quizzes!
-            </p>
-          </a>
-
-          <a
-            href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className={styles.card}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <h2 className={inter.className}>
-              Templates <span>-&gt;</span>
-            </h2>
-            <p className={inter.className}>
-              Discover and deploy boilerplate example Next.js&nbsp;projects.
-            </p>
-          </a>
-
-          <a
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className={styles.card}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <h2 className={inter.className}>
-              Deploy <span>-&gt;</span>
-            </h2>
-            <p className={inter.className}>
-              Instantly deploy your Next.js site to a shareable URL
-              with&nbsp;Vercel.
-            </p>
-          </a>
+      {/* <div className="bg-white">
+        <div className="flex flex-col items-center justify-center h-screen p-6">
+          Hi! reddit-clone-app demo
+          <div className='mt-10'>
+            <ul>
+              <li><Link href="/register">Go Register</Link></li>
+              <li><Link href="/login">Go Login</Link></li>
+              <li><Link href="/subs/create">Go Subs</Link></li>
+               
+            </ul>
+          </div>
         </div>
-      </main>
+      </div>
+       */}
     </>
   )
 }

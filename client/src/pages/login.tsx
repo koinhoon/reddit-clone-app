@@ -1,9 +1,9 @@
-import Link from 'next/link'
 import axios from 'axios';
+import Link from 'next/link';
 import { useRouter } from 'next/router';
-import React, { FormEvent, useState } from 'react'
+import { FormEvent, useState } from 'react';
+import { useAuthDispatch, useAuthState } from '../context/auth';
 import InputGroup from '../components/inputGroup';
-import { useAuthDispatch, useAuthState } from '../ context/auth';
 
 export const Login = () => {
     let router = useRouter();
@@ -13,11 +13,15 @@ export const Login = () => {
     const { authenticated } = useAuthState();
     const dispatch = useAuthDispatch();
 
+    if(authenticated) { router.push("/"); return; }
+
     const handleSubmit = async (event: FormEvent) => {
         event.preventDefault();
 
         try {
-            const res = await axios.post("/auth/login", { password, username }, { withCredentials: true })
+            const res = await axios.post("/auth/login", { password, username }, { 
+                withCredentials: true 
+            })
             dispatch("LOGIN", res.data?.user);
             router.push("/");
         } catch (error: any) {
@@ -44,7 +48,7 @@ export const Login = () => {
                         setValue={setPassword}
                         error={errors.password}
                     />
-                    <button className="w-full py-2 mb-1 text-xs font-bold text-white uppercase bg-gray-400 border bordder-gray-400 rounded">회원가입</button>
+                    <button className="w-full py-2 mb-1 text-xs font-bold text-white uppercase bg-gray-400 border bordder-gray-400 rounded">로그인</button>
                 </form>
                 <small>
                     아직 아이디가 없나요?

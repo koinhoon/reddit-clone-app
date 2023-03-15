@@ -1,9 +1,11 @@
-import { isEmpty, validate } from "class-validator";
-import { Request, Response, Router } from "express";
 import bcrypt from 'bcryptjs';
-import User from "../entities/User";
-import jwt from "jsonwebtoken";
+import { isEmpty, validate } from "class-validator";
 import cookie from "cookie";
+import { Request, Response, Router } from "express";
+import jwt from "jsonwebtoken";
+import User from "../entities/User";
+import authMiddleware from "../middlewares/auth";
+import userMiddleware from "../middlewares/user";
 
 const mapError = (errors : Object[]) => {
     return errors.reduce((prev :any , err:any) => {
@@ -20,6 +22,7 @@ const register = async (req : Request, res:Response) => {
         let errors : any = {};
 
         // 이메일 또는 유저이름이 기 저장되어 있는지 중복체크
+        { email:"test@test"}
         const emailUser = await User.findOneBy({email});
         const usernameUser = await User.findOneBy({ username });
 
@@ -96,8 +99,29 @@ const login = async (req:Request, res:Response) => {
     }
 };
 
+const me = async (req : Request, res:Response) => {
+    //console.log("me - in")
+    return res.json(res.locals.user);
+};
+
+const logout = async (req : Request, res:Response) => {
+    res.set(
+        "Set-Cookie",
+        cookie.serialize("token", "", {
+            httpOnly:true,
+            secure:process.env.NODE_ENV === "production",
+            sameSite: "strict",
+            expires: new Date(0),
+            path: "/",
+        })
+    );
+    res.status(200).json({success : true})
+};
+
 const router = Router();
+router.get("/me", userMiddleware, authMiddleware, me)
 router.post("/register", register);
 router.post("/login", login);
+router.post("/logout", userMiddleware, authMiddleware, logout);
 
 export default router;

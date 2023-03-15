@@ -1,8 +1,8 @@
-import Link from 'next/link'
-import { useRouter } from 'next/router';
-import React, { FormEvent, useState } from 'react'
-import InputGroup from '../components/inputGroup';
 import axios from 'axios';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { FormEvent, useState } from 'react';
+import InputGroup from '../components/inputGroup';
 
 const Register = () => {
     const [email, setEmail] = useState("");
@@ -22,8 +22,7 @@ const Register = () => {
                 username
             })
             console.log(res, res);
-            //router.push("/login")
-
+            router.push("/login")
         } catch(e : any) {
             console.error(e);
             setErrors(e.response?.data || {});
