@@ -17,7 +17,7 @@ const UserPage = () => {
         <div className='flex max-w-5xl px-4 pt-5 mx-auto'>
             {/* 유저 포트스 댓글 리스트 */ }
             <div className='w-full md:mr-3 md:w-8/12'>
-                {data.userData.map(data => {
+                {data.userData.map((data: any) => {
                     if(data.type === "Post") {
                         const post:Post = data;
                         return <PostCard key={post.identifier} post={post} />
