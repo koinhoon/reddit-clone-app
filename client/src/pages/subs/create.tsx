@@ -87,7 +87,7 @@ export const getServerSideProps : GetServerSideProps = async({req, res}) => {
     try {
         const cookie = req.headers.cookie;
         if(!cookie) throw new Error("missing auth token in cookie!");
-        await axios.get("/auth/me", { headers: { cookie }})
+        await axios.get(`${process.env.NEXT_PUBLIC_SERVER_BASE_URL}/auth/me`, { headers: { cookie }})
         return { props: {} }
     } catch(e) {
         // login 페이지로 이동
